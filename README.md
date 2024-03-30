@@ -54,6 +54,9 @@ What is Base64? Check out [base64encoder.io](https://www.base64encoder.io/learn/
 It's purpose is to encode binary or non-ASCII text data to printable ASCII format so
 it can be safely transmitted over _any_ communication channel. 
 
+For our application, the header would be "Authorization: Basic Base64Encoding=="
+Where that encoding is "username:password" separated by a colon like so.
+
 What about Request Guards? Sounds like Middleware.
 There are apparently 2 versions of [rocket outcome](https://docs.rs.rocket/latest/rocket/outcome/)
 One being `rocket:outcome::Outcome::{Success, Error, Forward}` which is the OG.
@@ -65,3 +68,43 @@ then the struct becomes a trait guard.
 Maybe in the macros, they try to pull the value from the HTTP request, 
 hense the name...
 Very interesting implementation. 
+
+Yes, so we add the `BasicAuth` struct as a parameter and it
+somehow automagically runst the `from_request` method that
+returns Unauthorized if it is infact, unauthorized. 
+
+## Adding Database Support
+
+We will use Diesel, which requires the following:
+
+```bash
+sudo apt-get install libsqlite3-dev
+cargo install diesel_cli --no-default-features --features sqlite
+
+diesel setup --database-url ./database.sqlite
+diesel migration generate create_rustaceans
+```
+
+The former gets SQLite ready for our system, and the latter installs CLI tools only for SQLite.
+Check the Diesel website, but I think it comes with PostGreSQL and MySQL support.
+
+Then, we use the CLI to setup a database, which creates it and a `diesel.toml` file.
+We also create migrations for it.
+This creates `down.sql` and `up.sql` files. 
+I think it slightly defeats the purpose, but you put SQL into those files for when the databse is run.
+Like, `up.sql` is for spinning up the database...
+
+Once you have those set up, you can check migrations...
+
+```bash
+diesel migration list --database-url=database.sqlite
+diesel migration run --database-url=./database.sqlite/
+```
+
+it is also good to run the `migration revert` command to ensure you can roll back.
+You will see a `schema.rs` file now in `./src`. 
+There's a macro that converts things to structs! It's cool.
+
+You will need to bring in diesel at this point. The `r2d2` feature is meant to be more
+efficient at keeping connections open instead of creating a new connection for every query.
+Rocket also needs its own dependency.
